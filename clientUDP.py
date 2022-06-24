@@ -9,7 +9,7 @@ Created on Thu Jun 23 20:42:15 2022
 import socket as sk
 
 sock = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
-server_address = ('localhost', 8084)
+server_address = ('localhost', 8060)
 
 message = input("UDP message: ")
 try:

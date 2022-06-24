@@ -12,8 +12,13 @@ class Handler (socketserver.BaseRequestHandler):
     
     def handle(self):
         print("start handler")
+        
+        """
         data = self.request[0].strip()
         socket = self.request[1]
+
+        print("port : {} ".format(self.client_address[1]))
+
         print("{} wrote:".format(self.client_address[0]))
         print("sono l handler: "+data.decode())
-        socket.sendto(data.upper(), self.client_address)
+        socket.sendto(data.upper(), self.client_address)"""

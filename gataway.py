@@ -13,6 +13,28 @@ import time
 import threading
 import sys
 
+tempVar=""
+
+def udpRequest():
+    sock = socket(AF_INET, SOCK_DGRAM)
+    server_address = ('localhost', 8060)
+    sock.bind(server_address)
+    while True:
+        data, address = sock.recvfrom(4096)
+        print ("IP: "+str(address[0])+" - port: "+str(address[1])+"  - message: "+data.decode('utf8'))
+        global tempVar
+        tempVar = data.decode('utf8')
+        sent = sock.sendto(data, address)
+        
+        
+        
+        #socketInterfaceDrone = socketserver.UDPServer(("localhost", 8085), Handler )
+        #request  = socketInterfaceDrone.get_request()
+        #data = request[0]
+        #socket = request[1]
+        #print(data)
+    
+
 def JSonToData(message):
     data = json.load(message)
     drone = data.drone
@@ -29,27 +51,31 @@ def reciveMessage():
     print("Gateway : close socket")
     socketInterfaceClient.close()
     connectionSocket.close()
-    socketInterfaceDrone.shutdown()
+    #socketInterfaceDrone.shutdown()
     sys.exit(0) 
     
 def sendMessage():
     try:
         while True:
-            connectionSocket.send("Sono il gateway ".encode())
+            global tempVar 
+            connectionSocket.send(tempVar.encode())
             time.sleep(5)
     except:
         print("Server close")
         
 
 interfaceClientIP = "10.10.10.1/24"
-interfaceClientPort = "8083"
+interfaceClientPort = "8061"
 interfaceClientMac = "undefined"
 
 interfaceDroneIP = "102.168.1.1/24"
-interfaceDronePort = "8084"
+interfaceDronePort = "8082"
 interfaceDroneMac = "undefined"
 
-socketInterfaceDrone = socketserver.ThreadingUDPServer(("localhost", int(interfaceDronePort)), Handler )
+###socketInterfaceDrone = socketserver.ThreadingUDPServer(("localhost", int(interfaceDronePort)), Handler )
+thread3 = threading.Thread(target=udpRequest, args=())
+thread3.start()
+
 
 socketInterfaceClient = socket(AF_INET, SOCK_STREAM)
 socketInterfaceClient.bind(("localhost",int(interfaceClientPort)))
@@ -57,7 +83,7 @@ socketInterfaceClient.listen(1)
 
 print ('Start client comunication...')
 #Stabilisce la connessione, ossia sul socket si prepara ad accettare connessioni in entrata all'indirizzo e porta definiti
-connectionSocket, addr = socketInterfaceClient.accept()
+connectionSocket, addr = socketInterfaceClient.accept()  ##### bloccante nel caso il Client non si connette i droni non si connettono
 try:
     thread1 = threading.Thread(target=reciveMessage, args=())
     thread1.start()
@@ -69,7 +95,8 @@ except IOError:
     #Invia messaggio di risposta per file non trovato
 
     connectionSocket.close()
-    
+
+
 
 # entra nel loop infinito
 """
@@ -89,7 +116,7 @@ print("Server loop running in thread:", server_thread.name)
 
 print("OKOK")"""
 
-socketInterfaceDrone.serve_forever()
+##socketInterfaceDrone.serve_forever()
 
 #socketInterfaceDrone.server_close()
 
