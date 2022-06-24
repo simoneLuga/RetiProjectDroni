@@ -15,5 +15,5 @@ class Handler (socketserver.BaseRequestHandler):
         data = self.request[0].strip()
         socket = self.request[1]
         print("{} wrote:".format(self.client_address[0]))
-        print("sono l handler: "+data)
-        #socket.sendto(data.upper(), self.client_address)
+        print("sono l handler: "+data.decode())
+        socket.sendto(data.upper(), self.client_address)

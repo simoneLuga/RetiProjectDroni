@@ -29,6 +29,7 @@ def reciveMessage():
     print("Gateway : close socket")
     socketInterfaceClient.close()
     connectionSocket.close()
+    socketInterfaceDrone.shutdown()
     sys.exit(0) 
     
 def sendMessage():
@@ -41,11 +42,11 @@ def sendMessage():
         
 
 interfaceClientIP = "10.10.10.1/24"
-interfaceClientPort = "8082"
+interfaceClientPort = "8083"
 interfaceClientMac = "undefined"
 
 interfaceDroneIP = "102.168.1.1/24"
-interfaceDronePort = "8083"
+interfaceDronePort = "8084"
 interfaceDroneMac = "undefined"
 
 socketInterfaceDrone = socketserver.ThreadingUDPServer(("localhost", int(interfaceDronePort)), Handler )
@@ -70,7 +71,27 @@ except IOError:
     connectionSocket.close()
     
 
+# entra nel loop infinito
+"""
+try:
+  while True:
+    #sys.stdout.flush()
+    socketInterfaceDrone.serve_forever()
+except KeyboardInterrupt:
+    
+  pass"""
+"""
+server_thread = threading.Thread(target=socketInterfaceDrone.serve_forever)
+# Exit the server thread when the main thread terminates
+server_thread.daemon = True
+server_thread.start()
+print("Server loop running in thread:", server_thread.name)
 
+print("OKOK")"""
+
+socketInterfaceDrone.serve_forever()
+
+#socketInterfaceDrone.server_close()
 
 
 

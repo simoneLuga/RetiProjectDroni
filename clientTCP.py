@@ -27,7 +27,7 @@ def reciveMessage():
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-client.connect(('',8082))
+client.connect(("localhost", 8083))
 client.send("bello".encode())
 
 thread1 = threading.Thread(target=reciveMessage, args=())
