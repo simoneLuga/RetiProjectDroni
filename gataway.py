@@ -13,19 +13,61 @@ import time
 import threading
 import sys
 
-tempVar=""
+dnsTable = {
+    "drone1":"192.168.1.2",
+    "drone2":"192.168.1.3",
+    "drone3":"192.168.1.4"
+}
+
+def dns(nome):
+    return dnsTable[nome]
+
+def JSonToData(message):
+    data = json.loads(message)
+    drone = data.drone
+    Indirizzo = data.Indirizzo
+
+packet=""
+
+"""
+packet = {
+        "sourceMAC":"",
+        "destinationMAC":"",
+        "sourceIP":"",
+        "destinationIP":"",
+        "message":""
+    }"""
+
+arp_table_address_droni = {}
+arp_table_mac_droni = {}
+
+interfaceClientIP = "10.10.10.1/24"
+interfaceClientPort = "8062"
+interfaceClientMac = "undefined"
+
+interfaceDroneIP = "102.168.1.1/24"
+interfaceDronePort = "8063"
+interfaceDroneMac = "undefined"
 
 def udpRequest():
     sock = socket(AF_INET, SOCK_DGRAM)
-    server_address = ('localhost', 8060)
+    server_address = ('localhost', int(interfaceDronePort))
     sock.bind(server_address)
-    while True:
+    ok = True
+    while ok:
         data, address = sock.recvfrom(4096)
-        print ("IP: "+str(address[0])+" - port: "+str(address[1])+"  - message: "+data.decode('utf8'))
-        global tempVar
-        tempVar = data.decode('utf8')
-        sent = sock.sendto(data, address)
+        #print ("IP: "+str(address[0])+" - port: "+str(address[1])+"  - message: "+data.decode('utf8'))
+        #global packet
+        packet = json.loads(data.decode('utf8'))
+        #sent = sock.sendto(data, address)
+        if packet["message"]== "close": ok = False
         
+        if packet["message"] == "disponibile":
+            arp_table_address_droni[packet["sourceIP"]] = address
+            arp_table_mac_droni[packet["sourceIP"]] = packet["sourceMAC"]
+            sendMessage(packet["sourceIP"] + " disponibile")
+            
+        print("{0} | {1} | {2} | {3} | message: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
         
         
         #socketInterfaceDrone = socketserver.UDPServer(("localhost", 8085), Handler )
@@ -34,19 +76,39 @@ def udpRequest():
         #socket = request[1]
         #print(data)
     
+def sendUDP(ip,indirizzo):
+    packet = {
+            "sourceMAC":"undefined",
+            "destinationMAC":arp_table_mac_droni[ip],
+            "sourceIP":"undefined",
+            "destinationIP":ip,
+            "message":indirizzo
+        }
+    
+    sock = socket(AF_INET, SOCK_DGRAM)
+    address = arp_table_address_droni[ip]
+    sock.sendto(json.dumps(packet).encode('utf8'), address)
+    del arp_table_address_droni[ip]
+    #del arp_table_mac_droni[ip]
+    
+    
 
-def JSonToData(message):
-    data = json.load(message)
-    drone = data.drone
-    Indirizzo = data.Indirizzo
 
 def reciveMessage():
-    message = connectionSocket.recv(1024)
-    message=  message.decode();
+    packet = json.loads(connectionSocket.recv(1024).decode())
+    message =  packet["message"];
+    print("{0} | {1} | {2} | {3} | message: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
     while message!="close":
-        message = connectionSocket.recv(1024)
-        message=  message.decode()
-        print(message)
+        if packet["destinationIP"] in arp_table_address_droni.keys():
+            sendUDP(packet["destinationIP"], message)
+            sendMessage("{} partito".format(packet["destinationIP"]))
+        else:
+            sendMessage("{} non disponibile".format(packet["destinationIP"]))
+       
+        packet = json.loads(connectionSocket.recv(1024).decode())
+        message =  packet["message"];
+        print("{0} | {1} | {2} | {3} | message: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
+       
         
     print("Gateway : close socket")
     socketInterfaceClient.close()
@@ -54,23 +116,24 @@ def reciveMessage():
     #socketInterfaceDrone.shutdown()
     sys.exit(0) 
     
-def sendMessage():
+def sendMessage(message):
+    packet = {
+            "sourceMAC":"undefined",
+            "destinationMAC":"undefinded",
+            "sourceIP":"undefined",
+            "destinationIP":"undefined",
+            "message":message
+        }
+    
     try:
-        while True:
-            global tempVar 
-            connectionSocket.send(tempVar.encode())
-            time.sleep(5)
+        connectionSocket.send(json.dumps(packet).encode('utf8'))
     except:
         print("Server close")
         
 
-interfaceClientIP = "10.10.10.1/24"
-interfaceClientPort = "8061"
-interfaceClientMac = "undefined"
 
-interfaceDroneIP = "102.168.1.1/24"
-interfaceDronePort = "8082"
-interfaceDroneMac = "undefined"
+
+
 
 ###socketInterfaceDrone = socketserver.ThreadingUDPServer(("localhost", int(interfaceDronePort)), Handler )
 thread3 = threading.Thread(target=udpRequest, args=())
@@ -87,8 +150,8 @@ connectionSocket, addr = socketInterfaceClient.accept()  ##### bloccante nel cas
 try:
     thread1 = threading.Thread(target=reciveMessage, args=())
     thread1.start()
-    thread2 = threading.Thread(target=sendMessage, args=())
-    thread2.start()
+   # thread2 = threading.Thread(target=sendMessage, args=())
+    #thread2.start()
         
         
 except IOError:
