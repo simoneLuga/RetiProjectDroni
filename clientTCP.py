@@ -18,7 +18,7 @@ gatewayMac = "00:00:00:00"
 
 buffer = 4096
 
-ClientPort = "8080"
+ClientPort = "8076"
  
 def reciveMessage():
      try:

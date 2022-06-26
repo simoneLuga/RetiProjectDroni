@@ -18,7 +18,7 @@ gatewayMac = "00:00:00:00"
 gatewayIP = "10.10.10.1"
 buffer = 4096
 
-DronePort = "8081"
+DronePort = "8071"
 
 server_address = ('localhost', int(DronePort))
 
