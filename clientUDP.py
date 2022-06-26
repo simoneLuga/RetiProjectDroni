@@ -13,7 +13,7 @@ import random
 
 myIP = "192.168.1.2"
 myMAC = "00:00:00:01"
-server_address = ('localhost', 8063)
+server_address = ('localhost', 8082)
 
 
 

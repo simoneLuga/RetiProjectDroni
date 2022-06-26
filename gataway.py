@@ -45,15 +45,18 @@ myIP = "10.10.10.1"
 myMAC = "00:00:00:00"
 
 interfaceClientIP = "10.10.10.1/24"
-interfaceClientPort = "80"
+interfaceClientPort = "8080"
 interfaceClientMac = "undefined"
 
 interfaceDroneIP = "192.168.1.1/24"
-interfaceDronePort = "81"
+interfaceDronePort = "8081"
 interfaceDroneMac = "undefined"
 
 ClientIP = ""
 ClientMac = ""
+
+isOn = True
+
 #inizilize sock
 sock = socket(AF_INET, SOCK_DGRAM)
 
@@ -62,18 +65,19 @@ def udpRequest():
     sock = socket(AF_INET, SOCK_DGRAM)
     server_address = ('localhost', int(interfaceDronePort))
     sock.bind(server_address)
-    while True:
-        data, address = sock.recvfrom(buffer)
+    
+    global isOn
+    while isOn:
+        data, address = sock.recvfrom(buffer)  #TODO verificare cosa succede quando chiudo sock mentre é in attesa
         packet = json.loads(data.decode('utf8'))
-        if packet["message"]== "close":
-            break        
+       
         if packet["message"] == "disponibile":
             arp_table_address_droni[packet["sourceIP"]] = address
             arp_table_mac_droni[packet["sourceIP"]] = packet["sourceMAC"]
             sendMessage(packet["sourceIP"] + " disponibile")
         #log     
         print("log\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
-
+    
     
 def sendUDP(ip,indirizzo):
     packet = {
@@ -96,7 +100,8 @@ def listDisponibili():
     
 
 def reciveMessage():
-    while True:
+    global isOn
+    while isOn:
         packet = json.loads(connectionSocket.recv(buffer).decode())
         message =  packet["message"];
         #log
@@ -108,7 +113,7 @@ def reciveMessage():
         ClientMac = packet["sourceMAC"]
         
         if message =="CLOSE": 
-            break
+            isOn = False
         elif message =="LIST" :
             sendMessage(listDisponibili())
         else :
@@ -122,7 +127,7 @@ def reciveMessage():
     socketInterfaceClient.close()
     connectionSocket.close()
     global sock
-    sock.close()
+    sock.close()  #TODO verificare se lo chiudo ma magari non era aperto
     sys.exit(0) 
     
 def sendMessage(message):
