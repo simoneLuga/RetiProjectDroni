@@ -3,12 +3,14 @@
 """
 Created on Thu Jun 23 17:27:21 2022
 
-@author: alex
+@author: Alex e Simone
 """
 
 import socket
 import threading
 import json
+import time
+import sys
 
 myIP = "0.0.0.0"
 myMAC = "00:00:00:11"
@@ -16,17 +18,19 @@ myMAC = "00:00:00:11"
 gatewayIP = "10.10.10.1"
 gatewayMac = "00:00:00:00"
 
-buffer = 4096
+buffer = 1024
 
 ClientPort = "8080"
  
 def reciveMessage():
      try:
          while True:
-             packet = json.loads(client.recv(buffer).decode())
-             print("log\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
+             data = client.recv(buffer)
+             packet = json.loads(data.decode())
+             elapsedTime = time.time() - packet["time"]
+             print("\n\trecive:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nPacket size: {5} byte\nmessage: {6}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], elapsedTime,str(sys.getsizeof(data)),packet["message"]))       
      except:
-        print("Gateway  2 down")
+        print("Close socket")
 
 #apre la connessione
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -39,10 +43,14 @@ try:
             "destinationMAC": gatewayMac,
             "sourceIP":myIP,
             "destinationIP":gatewayIP,
-            "message": message}
+            "message": message,
+            "time": time.time()}
     client.send(json.dumps(packet).encode('utf8'))
-    packet = json.loads(client.recv(buffer).decode())
-    print("log\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
+    print("\n\tsend:\nSender: {0} | {1} -> Receiver: {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
+    data = client.recv(buffer)
+    packet = json.loads(data.decode())
+    elapsedTime = time.time() - packet["time"]
+    print("\n\trecive:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nPacket size: {5} byte\nmessage: {6}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], elapsedTime,str(sys.getsizeof(data)),packet["message"]))       
     myIP = packet["destinationIP"]
     
 except: 
@@ -54,50 +62,31 @@ finally:
 thread1 = threading.Thread(target=reciveMessage, args=())
 thread1.start()
 
-print("LIST > stampa IP lista dei droni disponibili per un nuovo invio di pacchetto" +
+strHelp=("\nMENU\nLIST > stampa IP lista dei droni disponibili per un nuovo invio di pacchetto" +
        "\nCLOSE > Chiude tutto" +
        "\noppure inserisc lip del drone che vuoi far partire" +
        "\nhelp > stampa la lista dei comandi")
-
-
-    
+print(strHelp)
 while True:
     try:
         cmdOrIP = input("\nComando o IPDrone : ")
+        packet = {
+                "sourceMAC":myMAC,
+                "destinationMAC": gatewayMac,
+                "sourceIP":myIP}
         
         if cmdOrIP == "help":
-            print("LIST > stampa IP lista dei droni disponibili per un nuovo invio di pacchetto" +
-                  "\nCLOSE > Chiude tutto" +
-                  "\noppure inserisc lip del drone che vuoi far partire" +
-                  "\nhelp > stampa la lista dei comandi")
+            print(strHelp)
         else:
-            if cmdOrIP == "LIST":
-                packet = {
-                        "sourceMAC":myMAC,
-                        "destinationMAC": gatewayMac,
-                        "sourceIP":myIP,
-                        "destinationIP":gatewayIP,
-                        "message": "LIST"}
-            elif cmdOrIP == "CLOSE":
-                packet = {
-                        "sourceMAC":myMAC,
-                        "destinationMAC": gatewayMac,
-                        "sourceIP":myIP,
-                        "destinationIP":gatewayIP,
-                        "message": "CLOSE"}
+            if cmdOrIP == "LIST" or cmdOrIP == "CLOSE":
+                packet["destinationIP"] = gatewayIP
+                packet["message"] = cmdOrIP
             else:
                 indirizzo = input("Indirizzo destinazione : ")
-                packet = {
-                            "sourceMAC":myMAC,
-                            "destinationMAC": gatewayMac,
-                            "sourceIP":myIP,
-                            "destinationIP":cmdOrIP,
-                            "message":indirizzo
-                        }
+                packet["destinationIP"] = cmdOrIP
+                packet["message"] = indirizzo
+            packet["time"]= time.time()
             client.send(json.dumps(packet).encode('utf8'))
-            if cmdOrIP == "CLOSE":
-                client.close()
-                break
         if cmdOrIP == "CLOSE":
             client.close()
             break

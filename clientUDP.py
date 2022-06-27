@@ -3,7 +3,7 @@
 """
 Created on Thu Jun 23 20:42:15 2022
 
-@author: alex
+@author: Alex e Simone
 """
 
 import socket as sk

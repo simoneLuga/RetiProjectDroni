@@ -3,11 +3,12 @@
 """
 Created on Thu Jun 23 20:42:15 2022
 
-@author: alex
+@author: Alex e Simone
 """
 
 import socket as sk
 import time
+import sys
 import json
 import random
 
@@ -16,7 +17,7 @@ myMAC = "00:00:00:02"
 
 gatewayMac = "00:00:00:00"
 gatewayIP = "192.168.1.1"
-buffer = 4096
+buffer = 1024
 
 DronePort = "8081"
 
@@ -31,49 +32,44 @@ try:
             "destinationMAC" : gatewayMac,
             "sourceIP" : myIP,
             "destinationIP" : gatewayIP,
-            "message": message
+            "message": message,
+            "time": time.time()
         }
     
-    print("\nlog send\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
+    print("\n\tsend:\nSender: {0} | {1} -> Receiver: {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
     packet  = json.dumps(packet)
     sent = sock.sendto(packet.encode(), server_address)
     
     #si mette in attesa di una risopsta dal gateway
     data, server = sock.recvfrom(buffer)
     packet = json.loads(data.decode('utf8'))
-    print("\nlog recive\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
-    
+    elapsedTime = time.time() - packet["time"]
+    print("\n\trecive:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nPacket size: {5} byte\nmessage: {6}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], elapsedTime,str(sys.getsizeof(data)),packet["message"]))       
     myIP = packet["destinationIP"]
     
     
 except Exception as info:
     print(info)
 finally:
-    print ('closing socket')
     print("IP address : {}".format(myIP))
     sock.close()
     
 while myIP != "0.0.0.0":
     
-    
-    
-    
     message = "disponibile"
     sock = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
-    
-    try:
-        
-        
-        
+    print ('\nOpen socket')
+    try:       
         packet = {
                 "sourceMAC" : myMAC,
                 "destinationMAC" : gatewayMac,
                 "sourceIP" : myIP,
                 "destinationIP" : gatewayIP,
-                "message": message
+                "message": message,
+                "time": time.time()
             }
         # inviate il messaggio
-        print("\nlog send\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
+        print("\n\tsend:\nSender: {0} | {1} -> Receiver: {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
         
         #forma il json ed invia
         packet  = json.dumps(packet)
@@ -82,23 +78,27 @@ while myIP != "0.0.0.0":
         #si mette in attesa di una risopsta dal gateway
         data, server = sock.recvfrom(buffer)
         packet = json.loads(data.decode('utf8'))
-        print("\nlog revice\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
-        
+        elapsedTime = time.time() - packet["time"]
+        print("\n\trecive:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nPacket size: {5} byte\nmessage: {6}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], elapsedTime,str(sys.getsizeof(data)),packet["message"]))       
+        if packet["message"] == "CLOSE":
+            print("CLOSE")
+            break
         #Parte
-        wait = random.randint(5,10)
+        wait = random.randint(10,15)
+        print("\nIN TRANSITO...")
         time.sleep(wait)
-        
-        
+        print("\nCONSEGANTO RITORNO...")
         sock = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
         packet["message"] = "PACCO CONSEGNATO in {}s - torno alla base".format(wait)
         packet  = json.dumps(packet)
         sent = sock.sendto(packet.encode(), server_address)
         #non si aspetta risposta e torna alla base
         time.sleep(wait)      
+        
     except Exception as info:
         print(info)
     finally:
-        print ('closing socket')
+        print ('\nClosing socket')
         sock.close()
         
         
