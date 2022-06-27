@@ -11,23 +11,59 @@ import time
 import json
 import random
 
-myIP = "192.168.1.4"
-myMAC = "00:00:00:04"
+myIP = "0.0.0.0"
+myMAC = "00:00:00:03"
 
 gatewayMac = "00:00:00:00"
-gatewayIP = "10.10.10.1"
+gatewayIP = "192.168.1.1"
 buffer = 4096
 
-DronePort = "81"
+DronePort = "8081"
 
 server_address = ('localhost', int(DronePort))
 
-
-while True:
+try:
+    message = "IP address request"
+    sock = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
+    
+    packet = {
+            "sourceMAC" : myMAC,
+            "destinationMAC" : gatewayMac,
+            "sourceIP" : myIP,
+            "destinationIP" : gatewayIP,
+            "message": message
+        }
+    
+    print("\nlog send\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
+    packet  = json.dumps(packet)
+    sent = sock.sendto(packet.encode(), server_address)
+    
+    #si mette in attesa di una risopsta dal gateway
+    data, server = sock.recvfrom(buffer)
+    packet = json.loads(data.decode('utf8'))
+    print("\nlog recive\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
+    
+    myIP = packet["destinationIP"]
+    
+    
+except Exception as info:
+    print(info)
+finally:
+    print ('closing socket')
+    print("IP address : {}".format(myIP))
+    sock.close()
+    
+while myIP != "0.0.0.0":
+    
+    
+    
+    
     message = "disponibile"
     sock = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
     
     try:
+        
+        
         
         packet = {
                 "sourceMAC" : myMAC,
@@ -37,7 +73,7 @@ while True:
                 "message": message
             }
         # inviate il messaggio
-        print("log\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
+        print("\nlog send\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
         
         #forma il json ed invia
         packet  = json.dumps(packet)
@@ -46,7 +82,7 @@ while True:
         #si mette in attesa di una risopsta dal gateway
         data, server = sock.recvfrom(buffer)
         packet = json.loads(data.decode('utf8'))
-        print("log\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
+        print("\nlog revice\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
         
         #Parte
         wait = random.randint(5,10)

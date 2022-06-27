@@ -11,6 +11,8 @@ import json
 import time
 import threading
 import sys
+import ipaddress as ipaddr
+import time
 
 """ Struttura dati del pacchetto
 packet = {
@@ -41,7 +43,8 @@ def JSonToData(message):
 arp_table_address_droni = {}
 arp_table_mac_droni = {}
 
-myIP = "10.10.10.1"
+networkDroni = "192.168.1.0/24"
+networkClient = "10.10.10.0/24"
 myMAC = "00:00:00:00"
 
 interfaceClientIP = "10.10.10.1/24"
@@ -52,13 +55,36 @@ interfaceDroneIP = "192.168.1.1/24"
 interfaceDronePort = "8081"
 interfaceDroneMac = "undefined"
 
-ClientIP = ""
-ClientMac = ""
+# IP statico per il client
+ClientIP = "10.10.10.2"
+ClientMac = "00:00:00:11"
 
 isOn = True
 
+
 #inizilize sock
 sock = socket(AF_INET, SOCK_DGRAM)
+
+def get_ip_from_mac(d, mac):  
+    return [k for k, v in d.items() if v == mac]
+
+def assignmentIP(macAddress, address):
+    ip = get_ip_from_mac(arp_table_mac_droni, macAddress)
+    
+    if len(ip)==0:
+        for addr in ipaddr.IPv4Network(networkDroni):
+        
+            if str(addr) not in arp_table_mac_droni.keys() and str(addr)!=(interfaceDroneIP.split("/"))[0] and str(addr)!="192.168.1.0":
+                ip =  str(addr)
+                arp_table_mac_droni[ip] = macAddress
+                break
+    else:
+        ip = ip[0]
+    
+    arp_table_address_droni[ip] = address
+    sendUDP(ip, "IP assegnato")
+    
+    
 
 def udpRequest():
     global sock
@@ -70,22 +96,27 @@ def udpRequest():
     while isOn:
         data, address = sock.recvfrom(buffer)  #TODO verificare cosa succede quando chiudo sock mentre é in attesa
         packet = json.loads(data.decode('utf8'))
-       
-        if packet["message"] == "disponibile":
+        
+        #log     
+        print("\nlog recive UDP\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
+        
+        if packet["message"] == "IP address request":
+            assignmentIP(packet["sourceMAC"], address)
+            
+        elif packet["message"] == "disponibile":
             arp_table_address_droni[packet["sourceIP"]] = address
             arp_table_mac_droni[packet["sourceIP"]] = packet["sourceMAC"]
             sendMessage(packet["sourceIP"] + " disponibile")
-        #log     
-        print("log\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
+        
     
-    
-def sendUDP(ip,indirizzo):
+def sendUDP(ip,message):
     packet = {
             "sourceMAC":myMAC,
             "destinationMAC":arp_table_mac_droni[ip],
-            "sourceIP":myIP,
+            "sourceIP":interfaceDroneIP,
             "destinationIP":ip,
-            "message":indirizzo
+            "message": message,
+            "time": time.time()
         }
     
     sock = socket(AF_INET, SOCK_DGRAM)
@@ -93,6 +124,7 @@ def sendUDP(ip,indirizzo):
     sock.sendto(json.dumps(packet).encode('utf8'), address)
     sock.close()
     del arp_table_address_droni[ip]
+    print("\nlog send UDP\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
     #del arp_table_mac_droni[ip]
 
 def listDisponibili():
@@ -105,14 +137,16 @@ def reciveMessage():
         packet = json.loads(connectionSocket.recv(buffer).decode())
         message =  packet["message"];
         #log
-        print("log\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
+        print("\nlog recive TCP\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
         
         #mi salvo IP e mac Specifico del Client
-        global ClientIP, ClientMac
-        ClientIP = packet["sourceIP"]
-        ClientMac = packet["sourceMAC"]
+        #global ClientIP, ClientMac
+        #ClientIP = packet["sourceIP"]
+        #ClientMac = packet["sourceMAC"]
         
-        if message =="CLOSE": 
+        if message== "IP address request":
+            sendMessage("IP assegnato")
+        elif message =="CLOSE": 
             isOn = False
         elif message =="LIST" :
             sendMessage(listDisponibili())
@@ -123,7 +157,7 @@ def reciveMessage():
             else:
                 sendMessage("{} non disponibile".format(packet["destinationIP"]))
     
-    print("Gateway : close socket from client")
+    print("\nGateway : close socket from client")
     socketInterfaceClient.close()
     connectionSocket.close()
     global sock
@@ -135,14 +169,15 @@ def sendMessage(message):
     packet = {
             "sourceMAC":myMAC,
             "destinationMAC":ClientMac,
-            "sourceIP":myIP,
+            "sourceIP":interfaceClientIP,
             "destinationIP": ClientIP,
             "message":message
         }
     try:
         connectionSocket.send(json.dumps(packet).encode('utf8'))
+        print("\nlog send TCP\nmittente -> {0} | {1} \nricevente -> {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
     except:
-        print("Server close")
+        print("\nServer close")
         
 #Thread droni in anscolto
 thread3 = threading.Thread(target=udpRequest, args=())
@@ -153,7 +188,7 @@ socketInterfaceClient = socket(AF_INET, SOCK_STREAM)
 socketInterfaceClient.bind(("localhost",int(interfaceClientPort)))
 socketInterfaceClient.listen(1)
 
-print ('Start client comunication...')
+print ('\nStart client comunication...')
 #Stabilisce la connessione, ossia sul socket si prepara ad accettare connessioni in entrata all'indirizzo e porta definiti
 connectionSocket, addr = socketInterfaceClient.accept()  ##### bloccante nel caso il Client non si connette i droni non si connettono
 try:
