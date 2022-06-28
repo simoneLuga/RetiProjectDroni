@@ -12,25 +12,33 @@ import json
 import time
 import sys
 
+printPacket = False
+
 myIP = "0.0.0.0"
-myMAC = "00:00:00:11"
+myMAC = "CC:00:00:11"
 
 gatewayIP = "10.10.10.1"
-gatewayMac = "00:00:00:00"
+gatewayMac = "AA:00:00:01"
 
 broadcastNewtworkDrone = "192.168.1.255"
 
 buffer = 1024
-
 ClientPort = "8080"
  
 def reciveMessage():
      try:
          while True:
              data = client.recv(buffer)
-             packet = json.loads(data.decode())
-             elapsedTime = time.time() - packet["time"]
-             print("\n\trecive:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nPacket size: {5} byte\nmessage: {6}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], elapsedTime,str(sys.getsizeof(data)),packet["message"]))       
+             data = (data.decode()).split('{')
+             
+             # il primo elemento é nullo causato dallo split
+             data.pop(0) 
+             for item in data:
+                 tempPacket = json.loads("{" + item)
+                 elapsedTime = time.time() - tempPacket["time"]
+                 print("\n\trecive:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nmessage: {5}".format(tempPacket["sourceIP"], tempPacket["sourceMAC"], tempPacket["destinationIP"], tempPacket["destinationMAC"], elapsedTime,tempPacket["message"]) 
+                       if printPacket else tempPacket["message"])
+                 
      except:
         print("Close socket")
 
@@ -48,15 +56,17 @@ try:
             "message": message,
             "time": time.time()}
     client.send(json.dumps(packet).encode('utf8'))
-    print("\n\tsend:\nSender: {0} | {1} -> Receiver: {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
+    print("\n\tsend:\nSender: {0} | {1} -> Receiver: {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"])
+          if printPacket else "\n"+packet["message"])
     data = client.recv(buffer)
     packet = json.loads(data.decode())
     elapsedTime = time.time() - packet["time"]
-    print("\n\trecive:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nPacket size: {5} byte\nmessage: {6}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], elapsedTime,str(sys.getsizeof(data)),packet["message"]))       
+    print("\n\trecive:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nPacket size: {5} byte\nmessage: {6}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], elapsedTime,str(sys.getsizeof(data)),packet["message"])
+          if printPacket else packet["message"])       
     myIP = packet["destinationIP"]
     
 except: 
-    print("Gateway 1 down")
+    print("Gateway down")
 finally:
     print("IP address : {}".format(myIP))
 
@@ -89,13 +99,15 @@ while True:
                 packet["message"] = indirizzo
             packet["time"]= time.time()
             client.send(json.dumps(packet).encode('utf8'))
+            print("\n\tsend:\nSender: {0} | {1} -> Receiver: {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"])
+                  if printPacket else "")
         if cmdOrIP == "CLOSE":
             client.close()
             break
     except: 
-        print("Gateway 1 down")
+        print("Gateway down")
     
-    
+print("By.")    
 
 
 
