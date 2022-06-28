@@ -18,6 +18,8 @@ myMAC = "00:00:00:11"
 gatewayIP = "10.10.10.1"
 gatewayMac = "00:00:00:00"
 
+broadcastNewtworkDrone = "192.168.1.255"
+
 buffer = 1024
 
 ClientPort = "8080"
@@ -79,7 +81,7 @@ while True:
             print(strHelp)
         else:
             if cmdOrIP == "LIST" or cmdOrIP == "CLOSE":
-                packet["destinationIP"] = gatewayIP
+                packet["destinationIP"] = broadcastNewtworkDrone
                 packet["message"] = cmdOrIP
             else:
                 indirizzo = input("Indirizzo destinazione : ")

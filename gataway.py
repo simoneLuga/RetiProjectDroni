@@ -29,12 +29,11 @@ interfaceClientPort = "8080"
 
 interfaceDroneIP = "192.168.1.1"
 interfaceDronePort = "8081"
+broadcast = "192.168.1.255"
 
 # IP statico per il client
 ClientIP = "10.10.10.2"
 ClientMac = "00:00:00:11"
-
-isOn = True
 
 #inizilize sock
 socketUDP = None
@@ -44,7 +43,6 @@ def get_ip_from_mac(d, mac):
 
 def assignmentIP(macAddress, address):
     ip = get_ip_from_mac(arp_table_mac_droni, macAddress)
-    
     if len(ip)==0:
         for addr in ipaddr.IPv4Network(networkDroni):
         
@@ -57,7 +55,15 @@ def assignmentIP(macAddress, address):
     
     if ip not in arp_table_address_droni.keys():
         arp_table_address_droni[ip] = address
-        sendUDP(ip, "IP assegnato")
+        newPacket = {
+                "sourceMAC":myMAC,
+                "destinationMAC":arp_table_mac_droni[ip],
+                "sourceIP":interfaceDroneIP,
+                "destinationIP":ip,
+                "message": "IP assegnato",
+                "time": time.time()
+            }
+        sendUDP(newPacket)
 
 def availableDrones():
     temp = "Droni disponibili -> "
@@ -77,85 +83,84 @@ def reciveUDP():
     socketUDP = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
     server_address = ('localhost', int(interfaceDronePort))
     socketUDP.bind(server_address)
-    global isOn
-    while isOn:
+    while True:
         try:
             data, address = socketUDP.recvfrom(buffer)
             packet = json.loads(data.decode('utf8'))   
             elapsedTime = time.time() - packet["time"]
             print("\n\trecive from DRONE:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nPacket size: {5} byte\nmessage: {6}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], elapsedTime,str(sys.getsizeof(data)),packet["message"]))       
             if packet["message"] == "IP address request":
-                assignmentIP(packet["sourceMAC"], address)
-                
-            elif packet["message"] == "disponibile":
-                arp_table_address_droni[packet["sourceIP"]] = address
-                arp_table_mac_droni[packet["sourceIP"]] = packet["sourceMAC"]
-                sendTCP(packet["sourceIP"] + " disponibile")
+                assignmentIP(packet["sourceMAC"], address)  
+            else:
+                sendTCP(packet)
         except Exception:   
             print("\nGateway -> close socket UDP")
-            isOn = False
     
-def sendUDP(ip,message):
-    packet = {
+def sendUDP(packet):
+    newPacket = {
             "sourceMAC":myMAC,
-            "destinationMAC":arp_table_mac_droni[ip],
             "sourceIP":interfaceDroneIP,
-            "destinationIP":ip,
-            "message": message,
+            "destinationIP":packet["destinationIP"],
+            "message": packet["message"],
             "time": time.time()
-        }  
+        } 
+    newPacket["destinationMAC"] = "XXX"
     try:
-        socketUDP = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
-        address = arp_table_address_droni[ip]
-        socketUDP.sendto(json.dumps(packet).encode('utf8'), address)
-        socketUDP.close()
-        arp_table_address_droni.pop(ip)   
-        print("\n\tsend to DRONE:\nSender: {0} | {1} -> Receiver: {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
+        if packet["destinationIP"] == broadcast:
+            print("\n\tsend to DRONE:\nSender: {0} | {1} -> Receiver: {2} | {3} \nmessage: {4}".format(newPacket["sourceIP"], newPacket["sourceMAC"], newPacket["destinationIP"], newPacket["destinationMAC"], newPacket["message"]))
+            print(str(arp_table_address_droni))
+            print(str(arp_table_mac_droni))
+            for address in arp_table_address_droni.values():
+                    socketUDP = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
+                    socketUDP.sendto(json.dumps(newPacket).encode('utf8'), address)
+                    print("ho inviato")
+                    socketUDP.close()              
+        elif packet["destinationIP"] in arp_table_mac_droni.keys():
+            newPacket["destinationMAC"] = arp_table_mac_droni[newPacket["destinationIP"]]
+            print("\n\tsend to DRONE:\nSender: {0} | {1} -> Receiver: {2} | {3} \nmessage: {4}".format(newPacket["sourceIP"], newPacket["sourceMAC"], newPacket["destinationIP"], newPacket["destinationMAC"], newPacket["message"]))
+            socketUDP = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
+            address= arp_table_address_droni[packet["destinationIP"]]
+            socketUDP.sendto(json.dumps(newPacket).encode('utf8'), address)
+            socketUDP.close()
+        else:
+            newPacket["destinationIP"] = packet["sourceIP"]
+            newPacket["message"] = "errore, ip non trovato"
+            sendTCP(newPacket)
     except Exception as err:
         print("send UDP - " + str(err))        
 
 def reciveTCP():
-    global isOn
-    while isOn:
+    while True:
         try:
             data = connectionSocket.recv(buffer)
             packet = json.loads(data.decode())
             message =  packet["message"];
-            #log
             elapsedTime = time.time() - packet["time"]
             print("\n\trecive from CLIENT:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nPacket size: {5} byte\nmessage: {6}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], elapsedTime,str(sys.getsizeof(data)),packet["message"]))       
-            if message== "IP address request":
-                sendTCP("IP assegnato")
-            elif message =="CLOSE": 
-                isOn = False
-            elif message =="LIST" :
-                sendTCP(availableDrones())
+            if message == "IP address request":
+                packet["message"]="IP assegnato"
+                sendTCP(packet)
             else :
-                if packet["destinationIP"] in arp_table_address_droni.keys():
-                    sendUDP(packet["destinationIP"], message)
-                    sendTCP("{} partito".format(packet["destinationIP"]))
-                else:
-                    sendTCP("{} non disponibile".format(packet["destinationIP"]))
+                sendUDP(packet)
         except Exception as err: 
            print("recive TCP - " + str(err))  
-           isOn = False
            
     print("\nGateway -> close socket TCP")
-    closeAll()
+    # TODO closeAll()
     
-def sendTCP(message):
-    global ClientIP, ClientMac
-    packet = {
+def sendTCP(packet):
+    global ClientMac
+    newPacket = {
             "sourceMAC":myMAC,
             "destinationMAC":ClientMac,
             "sourceIP":interfaceClientIP,
-            "destinationIP":ClientIP,
-            "message":message,
+            "destinationIP":packet["destinationIP"],
+            "message":packet["message"],
             "time":time.time()
         }
     try:
-        connectionSocket.send(json.dumps(packet).encode('utf8'))
-        print("\n\tsend to CLIENT:\nSender: {0} | {1} -> Receiver: {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"]))
+        connectionSocket.send(json.dumps(newPacket).encode('utf8'))
+        print("\n\tsend to CLIENT:\nSender: {0} | {1} -> Receiver: {2} | {3} \nmessage: {4}".format(newPacket["sourceIP"], newPacket["sourceMAC"], newPacket["destinationIP"], newPacket["destinationMAC"], newPacket["message"]))
     except:
         print("\nClient turned off")
 
@@ -165,6 +170,8 @@ socketInterfaceClient.bind(("localhost",int(interfaceClientPort)))
 socketInterfaceClient.listen(1)
 print ('Waiting for client...') 
 #Thread droni in anscolto
+
+
 threadUDP = threading.Thread(target=reciveUDP, args=())
 threadTCP= threading.Thread(target=reciveTCP, args=())
 
