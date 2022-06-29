@@ -161,12 +161,13 @@ print ('Waiting for client...')
 #Thread droni in anscolto
 
 def close():
-    print( '\n\nClose gateway.')
     try:
         socketInterfaceClient.close()
         connectionSocket.close()
+        socketUDP.shutdown(0)
         socketUDP.close()
     finally:
+      print( '\n\nClose gateway.')
       sys.exit(0)
 
 #definiamo una funzione per permetterci di uscire dal processo tramite Ctrl-C

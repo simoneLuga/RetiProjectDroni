@@ -15,6 +15,8 @@ import time
 import sys
 
 printPacket = False
+value = input("Per Debug inserire 1: ")
+if value=="1": printPacket=True
 
 myIP = "0.0.0.0"
 myMAC = "CC-CC-CC-00-00-01"
@@ -105,12 +107,12 @@ while True:
             print("\n\tsend:\nSender: {0} | {1} -> Receiver: {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"])
                   if printPacket else "")
         if cmdOrIP == "CLOSE":
+            client.shutdown(0)
             client.close()
             break
     except: 
         print("Gateway down")
     
-print("By.")    
 
 
 

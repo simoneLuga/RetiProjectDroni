@@ -17,6 +17,8 @@ import threading
 
 #impostare a True se si volgiono visualizzare i log dei pacchetti inviati e ricevuti
 printPacket=False
+value = input("Per Debug inserire 1: ")
+if value=="1": printPacket=True
 
 minSec = 15
 maxSec = 20
@@ -31,44 +33,70 @@ gatewayIP = "192.168.1.1"
 ClientIP = "10.10.10.2"
 
 buffer = 1024
-
 DronePort = "8081"
-
 server_address = ('localhost', int(DronePort))
 
-#Funzione che rispone a tutte le richieste : non sono disponibile 
-#viene avviata su un thread mentre il drono é in viaggio
-def reciveMessage():
-    try:
-        global myIP
-        while True:
-            data, address = sock.recvfrom(buffer)
-            packet = json.loads(data.decode('utf8'))   
-            elapsedTime = time.time() - packet["time"]
-            print("\n\trecive from CLIENT:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nPacket size: {5} byte\nmessage: {6}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], elapsedTime,str(sys.getsizeof(data)),packet["message"])
-                  if printPacket else "Recive: "+packet["message"])
-            
-            newPacket = {
-                  "sourceMAC" : myMAC,
-                  "destinationMAC" : gatewayMac,
-                  "sourceIP" : myIP,
-                  "destinationIP" : ClientIP,
-                  "message": myIP + " - non sono disponibile",
-                  "time": time.time()
-              }
-            
-            print("\n\tsend:\nSender: {0} | {1} -> Receiver: {2} | {3} \nmessage: {4}".format(newPacket["sourceIP"], newPacket["sourceMAC"], newPacket["destinationIP"], newPacket["destinationMAC"], newPacket["message"])
-                  if printPacket else "Send: "+newPacket["message"])
-            
-            newPacket  = json.dumps(newPacket)
-            sock.sendto(newPacket.encode(), server_address)   
-            if packet["message"] == "CLOSE":
-                myIP = "0.0.0.0"
-    except Exception:        
-        print("\nClose thread")     
+state = True #True disponibile , False occupato
+   
 
+def shipment(indirizzo, sock):
+    #Parte
+    global state
+    wait = random.randint(minSec,maxSec)
+    
+    
+    
+    print("\nIN TRANSITO -> {0}  ...\n".format(indirizzo))
+    packet = {
+            "sourceMAC" : myMAC,
+            "destinationMAC" : gatewayMac,
+            "sourceIP" : myIP,
+            "destinationIP" : ClientIP,
+            "message" : "{0}: Drone partito".format(myIP),
+            "time": time.time()
+        }
+    packet  = json.dumps(packet)
+    sock.sendto(packet.encode(), server_address)
+    time.sleep(wait)    
+    print("\nHO CONSEGNATO, RITORNO ...\n")
+    packet = {
+            "sourceMAC" : myMAC,
+            "destinationMAC" : gatewayMac,
+            "sourceIP" : myIP,
+            "destinationIP" : ClientIP,
+            "message" : "{0}: PACCO CONSEGNATO in {1}s - torno alla base".format(myIP,wait),
+            "time": time.time()
+        }
+    packet  = json.dumps(packet)
+    sock.sendto(packet.encode(), server_address) 
+    #non si aspetta risposta e torna alla base
+    time.sleep(wait)
+    print("\nIN BASE\n")
+    state = True
+    
+    available()
 
-
+def available():
+    message = myIP + " - sono disponibile"
+    try:       
+        packet = {
+                "sourceMAC" : myMAC,
+                "destinationMAC" : gatewayMac,
+                "sourceIP" : myIP,
+                "destinationIP" : ClientIP,
+                "message": message,
+                "time": time.time()
+            }
+        
+        print("\n\tsend:\nSender: {0} | {1} -> Receiver: {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"])
+              if printPacket else "Send: "+packet["message"])
+        
+        #forma il json ed invia
+        packet  = json.dumps(packet)
+        sock.sendto(packet.encode(), server_address)
+    except:
+        print("errore invio messagiigo")
+    
 #Chiediamo al gateway un indirizzo IP
 try:
     message = "IP address request"
@@ -103,27 +131,10 @@ finally:
 
 #Se ci é stato asseganto un ip ci rendiamo disponibili al volo    
 while myIP != "0.0.0.0":
-   
-    message = myIP + " - sono disponibile"
-    sock = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
-    print ('\nOpen socket')
+    #
     try:       
-        packet = {
-                "sourceMAC" : myMAC,
-                "destinationMAC" : gatewayMac,
-                "sourceIP" : myIP,
-                "destinationIP" : ClientIP,
-                "message": message,
-                "time": time.time()
-            }
+        if state: available()
         
-        print("\n\tsend:\nSender: {0} | {1} -> Receiver: {2} | {3} \nmessage: {4}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], packet["message"])
-              if printPacket else "Send: "+packet["message"])
-        
-        #forma il json ed invia
-        packet  = json.dumps(packet)
-        sent = sock.sendto(packet.encode(), server_address)
-
         #si mette in attesa di una risopsta dal gateway
         while True:
             data, server = sock.recvfrom(buffer)
@@ -133,13 +144,14 @@ while myIP != "0.0.0.0":
             print("\n\trecive:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nPacket size: {5} byte\nmessage: {6}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], elapsedTime,str(sys.getsizeof(data)),packet["message"])
                   if printPacket else "Recive: "+packet["message"])       
             
-            if packet["message"] == "LIST":
+            msg = packet["message"]
+            if msg == "LIST" or (state==False and msg!="CLOSE"):
                 newPacket = {
                       "sourceMAC" : myMAC,
                       "destinationMAC" : gatewayMac,
                       "sourceIP" : myIP,
                       "destinationIP" : ClientIP,
-                      "message": "{} - sono disponibile".format(myIP),
+                      "message":  myIP + (" - sono disponibile" if state else " - non sono disponibile"),
                       "time": time.time()
                   }
                 print("\n\tsend:\nSender: {0} | {1} -> Receiver: {2} | {3} \nmessage: {4}".format(packet["sourceIP"], newPacket["sourceMAC"], newPacket["destinationIP"], newPacket["destinationMAC"], newPacket["message"])
@@ -150,50 +162,32 @@ while myIP != "0.0.0.0":
                 break
             
         #Usciamo dal while per chiudere l esecuzione
-        if packet["message"] == "CLOSE":
+        if msg == "CLOSE":
             break
         
-        #Parte
-        wait = random.randint(minSec,maxSec)
-        
-        
-        threadUDPRecive= threading.Thread(target=reciveMessage, args=())
-        threadUDPRecive.start()
-        print("\nIN TRANSITO -> {0}  ...".format(packet["message"]))
-        packet = {
-                "sourceMAC" : myMAC,
-                "destinationMAC" : gatewayMac,
-                "sourceIP" : myIP,
-                "destinationIP" : ClientIP,
-                "message" : "{0}: Drone partito".format(myIP),
-                "time": time.time()
-            }
-        packet  = json.dumps(packet)
-        sent = sock.sendto(packet.encode(), server_address)
-        time.sleep(wait)    
-        print("\nHO CONSEGNATO, RITORNO ...")
-        packet = {
-                "sourceMAC" : myMAC,
-                "destinationMAC" : gatewayMac,
-                "sourceIP" : myIP,
-                "destinationIP" : ClientIP,
-                "message" : "{0}: PACCO CONSEGNATO in {1}s - torno alla base".format(myIP,wait),
-                "time": time.time()
-            }
-        packet  = json.dumps(packet)
-        sent = sock.sendto(packet.encode(), server_address) 
-        #non si aspetta risposta e torna alla base
-        time.sleep(wait)
-        print("IN BASE")
+        #Parte la spedizione
+        if state:
+            state  = False
+            threadShip= threading.Thread(target=shipment, args=[packet["message"],sock])
+            threadShip.start()
 
     except Exception as info:
         print(info)
-    finally:
-        print ('\nClosing socket')
-        sock.close()
+
+try:
+    threadShip.join()
+except:
+    print("Drone non in spedizione")
+finally:
+   sock.close()
+   print ('\nClosing.')
+   sys.exit(0)
+    
+
         
         
-        
+
+     
         
         
         
