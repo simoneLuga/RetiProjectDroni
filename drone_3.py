@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jun 23 20:42:15 2022
-
-@author: Alex e Simone
+@authors: Presepi Alex - 0000976898
+alex.presepi@studio.unibo.it
+Lugaresi Simone - 0000970392
+simone.lugaresi@studio.unibo.it
 """
 
 import socket as sk
@@ -17,9 +18,9 @@ import threading
 printPacket=False
 
 myIP = "0.0.0.0"
-myMAC = "D3:00:00:D3"
+myMAC = "DD-DD-DD-00-00-03"
 
-gatewayMac = "AA:00:00:01"
+gatewayMac = "AA-AA-AA-00-00-00"
 gatewayIP = "192.168.1.1"
 
 #É impostato statico nel  gateway
@@ -35,6 +36,7 @@ server_address = ('localhost', int(DronePort))
 #viene avviata su un thread mentre il drono é in viaggio
 def reciveMessage():
     try:
+        global myIP
         while True:
             data, address = sock.recvfrom(buffer)
             packet = json.loads(data.decode('utf8'))   
@@ -55,11 +57,11 @@ def reciveMessage():
                   if printPacket else "Send: "+newPacket["message"])
             
             newPacket  = json.dumps(newPacket)
-            sock.sendto(newPacket.encode(), server_address)     
-               
-                
+            sock.sendto(newPacket.encode(), server_address)   
+            if packet["message"] == "CLOSE":
+                myIP = "0.0.0.0"
     except Exception:        
-        print("\nClose socket UDP")     
+        print("\nClose thread")         
 
 
 
@@ -140,7 +142,6 @@ while myIP != "0.0.0.0":
                       if printPacket else "Send: "+newPacket["message"])
                 newPacket  = json.dumps(newPacket)
                 sent = sock.sendto(newPacket.encode(), server_address)
-                
             else:
                 break
             
@@ -154,12 +155,19 @@ while myIP != "0.0.0.0":
         
         threadUDPRecive= threading.Thread(target=reciveMessage, args=())
         threadUDPRecive.start()
-        
         print("\nIN TRANSITO -> {0}  ...".format(packet["message"]))
-        time.sleep(wait)
-        
-        print("\nCONSEGANTO RITORNO ...")
-        
+        packet = {
+                "sourceMAC" : myMAC,
+                "destinationMAC" : gatewayMac,
+                "sourceIP" : myIP,
+                "destinationIP" : ClientIP,
+                "message" : "{0}: Drone partito".format(myIP),
+                "time": time.time()
+            }
+        packet  = json.dumps(packet)
+        sent = sock.sendto(packet.encode(), server_address)
+        time.sleep(wait)    
+        print("\nHO CONSEGNATO, RITORNO ...")
         packet = {
                 "sourceMAC" : myMAC,
                 "destinationMAC" : gatewayMac,
@@ -169,19 +177,16 @@ while myIP != "0.0.0.0":
                 "time": time.time()
             }
         packet  = json.dumps(packet)
-        sent = sock.sendto(packet.encode(), server_address)
-        
+        sent = sock.sendto(packet.encode(), server_address) 
         #non si aspetta risposta e torna alla base
-        time.sleep(wait)      
+        time.sleep(wait)
         print("IN BASE")
-        
-        
+
     except Exception as info:
         print(info)
     finally:
         print ('\nClosing socket')
         sock.close()
-        
         
         
         

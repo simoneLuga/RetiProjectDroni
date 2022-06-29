@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jun 23 17:27:21 2022
-
-@author: Alex e Simone
+@authors: Presepi Alex - 0000976898
+alex.presepi@studio.unibo.it
+Lugaresi Simone - 0000970392
+simone.lugaresi@studio.unibo.it
 """
+
 
 import socket
 import threading
@@ -15,10 +17,10 @@ import sys
 printPacket = False
 
 myIP = "0.0.0.0"
-myMAC = "CC:00:00:11"
+myMAC = "CC-CC-CC-00-00-01"
 
 gatewayIP = "10.10.10.1"
-gatewayMac = "AA:00:00:01"
+gatewayMac = "AA-AA-AA-00-00-00"
 
 broadcastNewtworkDrone = "192.168.1.255"
 
@@ -77,7 +79,7 @@ thread1.start()
 strHelp=("\nMENU\nLIST > stampa IP lista dei droni disponibili per un nuovo invio di pacchetto" +
        "\nCLOSE > Chiude tutto" +
        "\noppure inserisc lip del drone che vuoi far partire" +
-       "\nhelp > stampa la lista dei comandi")
+       "\nhelp > stampa la lista dei comandi\n")
 print(strHelp)
 while True:
     try:
@@ -94,7 +96,7 @@ while True:
                 packet["destinationIP"] = broadcastNewtworkDrone
                 packet["message"] = cmdOrIP
             else:
-                indirizzo = input("Indirizzo destinazione : ")
+                indirizzo = input("Destinazione : ")
                 packet["destinationIP"] = cmdOrIP
                 packet["message"] = indirizzo
             packet["time"]= time.time()

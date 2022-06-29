@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed Jun 22 15:40:12 2022
-
-@author: Alex e Simone
+@authors: Presepi Alex - 0000976898
+alex.presepi@studio.unibo.it
+Lugaresi Simone - 0000970392
+simone.lugaresi@studio.unibo.it
 """
+
 import socket as sk
 import json
 import threading
@@ -17,7 +19,7 @@ packet=""
 
 buffer = 1024
 
-myMAC = "AA:00:00:01"
+myMAC = "AA-AA-AA-00-00-00"
 
 arp_table_address_droni = {}
 arp_table_mac_droni = {}
@@ -34,7 +36,7 @@ broadcast = "192.168.1.255"
 
 # IP statico per il client
 ClientIP = "10.10.10.2"
-ClientMac = "00:00:00:11"
+ClientMac = "CC-CC-CC-00-00-01"
 
 #inizilize sock
 socketUDP = None
@@ -159,9 +161,7 @@ socketInterfaceClient.listen(1)
 print ('Waiting for client...') 
 #Thread droni in anscolto
 
-
-#definiamo una funzione per permetterci di uscire dal processo tramite Ctrl-C
-def signal_handler(signal, frame):
+def close():
     print( '\n\nClose gateway.')
     try:
         socketInterfaceClient.close()
@@ -169,6 +169,10 @@ def signal_handler(signal, frame):
         socketUDP.close()
     finally:
       sys.exit(0)
+
+#definiamo una funzione per permetterci di uscire dal processo tramite Ctrl-C
+def signal_handler(signal, frame):
+    close()
 
 #interrompe l'esecuzione se da tastiera arriva la sequenza (CTRL + C) 
 signal.signal(signal.SIGINT, signal_handler)
@@ -188,6 +192,6 @@ except IOError as err:
 print("\nStart connections...  (Exit: Ctrl+C)")
 #aspetta la chiusura del client TCP  
 threadTCP.join()
-threadUDP.join()
-
+input("enter to close")
+close()
 
