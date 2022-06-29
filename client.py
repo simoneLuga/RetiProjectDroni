@@ -25,7 +25,7 @@ gatewayMac = "AA-AA-AA-00-00-00"
 broadcastNewtworkDrone = "192.168.1.255"
 
 buffer = 1024
-ClientPort = "8080"
+gatewayPort = "8080"
  
 def reciveMessage():
      try:
@@ -44,11 +44,12 @@ def reciveMessage():
      except:
         print("Close socket")
 
-#apre la connessione
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(("localhost", int(ClientPort)))
+
 
 try:
+    #apre la connessione
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.connect(("localhost", int(gatewayPort)))
     message = "IP address request"
     packet = {
             "sourceMAC":myMAC,

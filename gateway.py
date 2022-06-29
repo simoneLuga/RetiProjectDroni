@@ -101,7 +101,6 @@ def sendUDP(packet):
         if packet["destinationIP"] == broadcast:
             newPacket["destinationMAC"] = "ff:ff:ff:ff:ff:ff"
             print("\n\tsend to DRONE:\nSender: {0} | {1} -> Receiver: {2} | {3} \nmessage: {4}".format(newPacket["sourceIP"], newPacket["sourceMAC"], newPacket["destinationIP"], newPacket["destinationMAC"], newPacket["message"]))
-
             for address in arp_table_address_droni.values():
                     socketUDP = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
                     socketUDP.sendto(json.dumps(newPacket).encode('utf8'), address)

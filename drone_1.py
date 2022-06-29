@@ -18,6 +18,9 @@ import threading
 #impostare a True se si volgiono visualizzare i log dei pacchetti inviati e ricevuti
 printPacket=False
 
+minSec = 15
+maxSec = 20
+
 myIP = "0.0.0.0"
 myMAC = "DD-DD-DD-00-00-01"
 
@@ -151,7 +154,7 @@ while myIP != "0.0.0.0":
             break
         
         #Parte
-        wait = random.randint(15,20)
+        wait = random.randint(minSec,maxSec)
         
         
         threadUDPRecive= threading.Thread(target=reciveMessage, args=())
