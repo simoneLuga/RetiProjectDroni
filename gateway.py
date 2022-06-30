@@ -69,7 +69,7 @@ def assignmentIP(macAddress, address):
     sendUDP(newPacket)    
 
          
-def reciveUDP():
+def receiveUDP():
     global socketUDP
     socketUDP = sk.socket(sk.AF_INET, sk.SOCK_DGRAM)
     server_address = ('localhost', int(interfaceDronePort))
@@ -79,7 +79,7 @@ def reciveUDP():
             data, address = socketUDP.recvfrom(buffer)
             packet = json.loads(data.decode('utf8'))   
             elapsedTime = time.time() - packet["time"]
-            print("\n\trecive from DRONE:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nPacket size: {5} byte\nmessage: {6}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], elapsedTime,str(sys.getsizeof(data)),packet["message"]))       
+            print("\n\treceive from DRONE:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nPacket size: {5} byte\nmessage: {6}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], elapsedTime,str(sys.getsizeof(data)),packet["message"]))       
             if packet["message"] == "IP address request":
                 assignmentIP(packet["sourceMAC"], address)  
             else:
@@ -119,14 +119,14 @@ def sendUDP(packet):
     except Exception as err:
         print("send UDP - " + str(err))        
 
-def reciveTCP():
+def receiveTCP():
     try:
         while True:
             data = connectionSocket.recv(buffer)
             packet = json.loads(data.decode())
             message =  packet["message"];
             elapsedTime = time.time() - packet["time"]
-            print("\n\trecive from CLIENT:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nPacket size: {5} byte\nmessage: {6}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], elapsedTime,str(sys.getsizeof(data)),packet["message"]))       
+            print("\n\treceive from CLIENT:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nPacket size: {5} byte\nmessage: {6}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], elapsedTime,str(sys.getsizeof(data)),packet["message"]))       
             if message == "IP address request":
                 packet["message"]="IP assegnato"
                 packet["destinationIP"]=ClientIP
@@ -177,8 +177,8 @@ def signal_handler(signal, frame):
 #interrompe l'esecuzione se da tastiera arriva la sequenza (CTRL + C) 
 signal.signal(signal.SIGINT, signal_handler)
 
-threadUDP = threading.Thread(target=reciveUDP, args=())
-threadTCP= threading.Thread(target=reciveTCP, args=())
+threadUDP = threading.Thread(target=receiveUDP, args=())
+threadTCP= threading.Thread(target=receiveTCP, args=())
 
 #Stabilisce la connessione, ossia sul socket si prepara ad accettare connessioni in entrata all'indirizzo e porta definiti
   ##### bloccante nel caso il Client non si connette i droni non si connettono

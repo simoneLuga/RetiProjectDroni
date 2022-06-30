@@ -29,7 +29,7 @@ broadcastNewtworkDrone = "192.168.1.255"
 buffer = 1024
 gatewayPort = "8080"
  
-def reciveMessage():
+def receiveMessage():
      try:
          while True:
              data = client.recv(buffer)
@@ -40,7 +40,7 @@ def reciveMessage():
              for item in data:
                  tempPacket = json.loads("{" + item)
                  elapsedTime = time.time() - tempPacket["time"]
-                 print("\n\trecive:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nmessage: {5}".format(tempPacket["sourceIP"], tempPacket["sourceMAC"], tempPacket["destinationIP"], tempPacket["destinationMAC"], elapsedTime,tempPacket["message"]) 
+                 print("\n\treceive:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nmessage: {5}".format(tempPacket["sourceIP"], tempPacket["sourceMAC"], tempPacket["destinationIP"], tempPacket["destinationMAC"], elapsedTime,tempPacket["message"]) 
                        if printPacket else tempPacket["message"])
                  
      except:
@@ -66,7 +66,7 @@ try:
     data = client.recv(buffer)
     packet = json.loads(data.decode())
     elapsedTime = time.time() - packet["time"]
-    print("\n\trecive:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nPacket size: {5} byte\nmessage: {6}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], elapsedTime,str(sys.getsizeof(data)),packet["message"])
+    print("\n\treceive:\nSender: {0} | {1} -> receiver: {2} | {3} \nTime elapsed: {4}\nPacket size: {5} byte\nmessage: {6}".format(packet["sourceIP"], packet["sourceMAC"], packet["destinationIP"], packet["destinationMAC"], elapsedTime,str(sys.getsizeof(data)),packet["message"])
           if printPacket else packet["message"])       
     myIP = packet["destinationIP"]
     
@@ -76,7 +76,7 @@ finally:
     print("IP address : {}".format(myIP))
 
 #avvia il thread sullaricezione
-thread1 = threading.Thread(target=reciveMessage, args=())
+thread1 = threading.Thread(target=receiveMessage, args=())
 thread1.start()
 
 strHelp=("\nMENU\nLIST > stampa IP lista dei droni disponibili per un nuovo invio di pacchetto" +
