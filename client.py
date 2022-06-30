@@ -47,7 +47,7 @@ def receiveMessage():
         print("Close socket")
 
 
-
+#Chiediamo al gateway un indirizzo IP
 try:
     #apre la connessione
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -75,7 +75,7 @@ except:
 finally:
     print("IP address : {}".format(myIP))
 
-#avvia il thread sullaricezione
+#avvia il thread sulla ricezione
 thread1 = threading.Thread(target=receiveMessage, args=())
 thread1.start()
 
@@ -84,6 +84,7 @@ strHelp=("\nMENU\nLIST > stampa IP lista dei droni disponibili per un nuovo invi
        "\noppure inserisc lip del drone che vuoi far partire" +
        "\nhelp > stampa la lista dei comandi\n")
 print(strHelp)
+
 while True:
     try:
         cmdOrIP = input("\nComando o IPDrone : ")

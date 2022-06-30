@@ -38,12 +38,14 @@ broadcast = "192.168.1.255"
 ClientIP = "10.10.10.2"
 ClientMac = "CC-CC-CC-00-00-01"
 
-#inizilize sock
+#Definizione socket
 socketUDP = None
 
+#dato il dizionario contenente ip e mac e un mac se presente al interno restituisce l IP
 def get_ip_from_mac(d, mac):  
     return [k for k, v in d.items() if v == mac]
 
+#Funzione che cerca lip del mac se gia stato assegnato o ne genera uno nuovo
 def assignmentIP(macAddress, address):
     ip = get_ip_from_mac(arp_table_mac_droni, macAddress)
     if len(ip)==0:
@@ -158,8 +160,8 @@ socketInterfaceClient = sk.socket(sk.AF_INET, sk.SOCK_STREAM)
 socketInterfaceClient.bind(("localhost",int(interfaceClientPort)))
 socketInterfaceClient.listen(1)
 print ('Waiting for client...') 
-#Thread droni in anscolto
 
+#Funzione per chiudere tutte le connesioni se ancora aperte
 def close():
     try:
         socketInterfaceClient.close()
@@ -181,6 +183,7 @@ threadUDP = threading.Thread(target=receiveUDP, args=())
 threadTCP= threading.Thread(target=receiveTCP, args=())
 
 #Stabilisce la connessione, ossia sul socket si prepara ad accettare connessioni in entrata all'indirizzo e porta definiti
+#Il thread dei droni parte prima in modo da poter accettare connesioni da essi anche senza client
 try:
     threadUDP.start()
     connectionSocket, addr = socketInterfaceClient.accept()
@@ -188,7 +191,9 @@ try:
 except IOError as err:
     print ("Error thread - " + str(err)) 
     connectionSocket.close()
+
 print("\nStart connections...  (Exit: Ctrl+C)")
+
 #aspetta la chiusura del client TCP  
 threadTCP.join()
 input("enter to close")
