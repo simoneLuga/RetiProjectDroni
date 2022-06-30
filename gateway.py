@@ -181,7 +181,6 @@ threadUDP = threading.Thread(target=receiveUDP, args=())
 threadTCP= threading.Thread(target=receiveTCP, args=())
 
 #Stabilisce la connessione, ossia sul socket si prepara ad accettare connessioni in entrata all'indirizzo e porta definiti
-  ##### bloccante nel caso il Client non si connette i droni non si connettono
 try:
     threadUDP.start()
     connectionSocket, addr = socketInterfaceClient.accept()
